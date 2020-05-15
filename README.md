@@ -1,2 +1,4 @@
 # DataFest2020
-team K-NN live glorified google drive
+## Team K-NN Live
+### UC Riverside
+## Lauren Ebeltoft, Govin Nagpal, Victoria Rios, Ali Tehrani, Takumi Tsuda
