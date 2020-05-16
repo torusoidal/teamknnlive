@@ -1,0 +1,140 @@
+---
+title: "ucr datafest"
+author: "Takumi Tsuda"
+date: "5/14/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(dplyr)
+setwd("C:/Users/tsuda/Downloads")
+#Install the readxl package to read in excel 
+#install.packages("readxl")
+library("readxl")
+#Read in the data for the germination sheet
+stock_market <- read_excel("C:/Users/tsuda/Downloads/Final Data3.xlsx", col_names = T)
+stock_market
+attach(stock_market)
+```
+```{r}
+library("tidyverse")
+library("tseries")
+library("dplyr")
+#Filter out the cancelled flights so that noncancelled flights are showing
+NSGS=c()
+NSJPM=c()
+NSGS = dplyr:: select(stock_market, Date, Close, Symbol) %>%
+  filter(Symbol == "BA")
+arrange(stock_market,desc(Date))
+(NSJPM <- dplyr:: select(stock_market, Date, Close, Symbol, Sector) %>%
+    filter(Symbol == "JPM")) 
+(NS_arr <- arrange(stock_market, Date))
+```
+```{r}
+(new_stock.ts1 <- ts(as.numeric(NSGS$Close)))
+(new_stock.ts2 <- ts(as.numeric(NSJPM$Close)))
+
+plot(new_stock.ts1,xlab="Time",ylab="Price (USD)")
+fit1=lm(new_stock.ts1~NSGS$Date)
+plot(new_stock.ts2,xlab="Time",ylab="Price (USD)")
+fit2=lm(new_stock.ts2~NSJPM$Date)
+
+summary(fit1)
+
+ncvTest(fit1)
+qqnorm(resid(fit1),main="QQ plot for residuals")
+qqline(resid(fit1),main="QQ plot for residuals")
+
+plot(resid(fit1))
+#residuals show a very noticeable trend.
+adf.test(new_stock.ts1)
+
+#not stationary, suggesting we need a transformation
+
+
+
+library(MASS)
+#not stationary, suggesting we need a transformation
+bc1<- boxcox(fit1)
+
+ygs= new_stock.ts1^2
+yjpm=new_stock.ts2^2
+
+plot(ygs,ylab="Transformed Closing values",type="o")
+acf(ygs,main="",ylab="ACF of the logged series",lag.max=26)
+pacf(ygs,main="",ylab="PACF of the logged series",lag.max=26)
+adf.test(ygs)
+```
+```{r}
+dygs=as.vector(diff(ygs))
+adf.test(dygs)
+acf(dygs)
+pacf(dygs)
+
+arima1=arima(ygs,order=c(1,1,1),method='ML')
+arima1
+hist(resid(arima1),xlab="Standardized residuals")
+qqnorm(resid(arima1),main="")
+qqline(resid(arima1))
+shapiro.test(resid(arima1))
+
+acf(resid(arima1),main="Sample ACF for Predicted Model's Residuals")
+
+#overfitting with ARIMA(3,1,3),ARIMA(4,1,2)
+overfit1=arima(dygs,order=c(2,1,1),method="ML")
+overfit1
+overfit2=arima(dygs,order=c(1,1,2),method="ML")
+overfit2
+overfit3=arima(dygs,order=c(2,1,2),method="ML")
+overfit3
+arima1=arima(ygs,order=c(1,1,2),method="ML")
+arima1
+```
+
+
+
+```{r}
+length(new_stock.ts1)
+#overfit1 shows the smallest aic, while overfit 2 shows fairly close aic. Going with ARIMA(1,1,2) model
+d1=new_stock.ts1[1:102]
+length(d1)
+bevfit=arima((d1),order=c(1,1,2),method='ML')
+bevfit
+library(forecast)
+shapiro.test(resid(bevfit))
+(rainseriesforecasts2 <- forecast(bevfit, h=10))
+plot.ts(dygs)
+plot(rainseriesforecasts2,main="10D Forecast for Boeing after Transforming Closing Price")
+dygsNEW = HoltWinters(dygs,gamma=F,l.start=)
+yay1=forecast(new_stock.ts1,h=10)
+plot(yay1)
+
+NSGSforecast <- forecast(dygsNEW,h=19)
+
+
+```
+
+
+
+
+
+
+
+```{r}
+#NEXT FORECAST
+summary(fit2)
+library(car)
+ncvTest(fit2)
+qqnorm(resid(fit2),main="QQ plot for residuals")
+qqline(resid(fit2),main="QQ plot for residuals")
+
+plot(resid(fit2))
+#residuals show a very noticeable trend.
+adf.test(new_stock.ts2)
+```
+
